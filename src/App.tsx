@@ -1,0 +1,120 @@
+import { useEffect, useState } from 'react';
+import { auth, db, signInWithGoogle } from './lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Navbar } from './components/Navbar';
+import { Hero } from './components/Hero';
+import { Dashboard } from './components/Dashboard';
+import { Pricing } from './components/Pricing';
+import { Toaster } from '@/components/ui/sonner';
+import { motion, AnimatePresence } from 'motion/react';
+
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<'dashboard' | 'pricing'>('dashboard');
+  const [subscriptionStatus, setSubscriptionStatus] = useState('free');
+  const [nextBillingDate, setNextBillingDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Sync user to Firestore
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            subscriptionStatus: 'free',
+            createdAt: serverTimestamp(),
+          });
+          setSubscriptionStatus('free');
+          setNextBillingDate(null);
+        } else {
+          const userData = userSnap.data();
+          setSubscriptionStatus(userData.subscriptionStatus || 'free');
+          setNextBillingDate(userData.nextBillingDate || null);
+        }
+        setUser(user);
+      } else {
+        setUser(null);
+        setView('dashboard');
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-zinc-50">
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+          className="text-2xl font-bold text-zinc-900"
+        >
+          CareerForge Pro
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-zinc-900 selection:text-white">
+      <Navbar 
+        user={user} 
+        onSignIn={signInWithGoogle} 
+        onSignOut={() => auth.signOut()} 
+        onViewChange={setView}
+        currentView={view}
+        subscriptionStatus={subscriptionStatus}
+      />
+      <main>
+        <AnimatePresence mode="wait">
+          {!user ? (
+            <motion.div
+              key="hero"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Hero onGetStarted={signInWithGoogle} />
+            </motion.div>
+          ) : view === 'dashboard' ? (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <Dashboard 
+                user={user} 
+                subscriptionStatus={subscriptionStatus} 
+                nextBillingDate={nextBillingDate}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="pricing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <Pricing 
+                userId={user.uid} 
+                email={user.email || ''} 
+                currentStatus={subscriptionStatus} 
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+      <Toaster position="top-center" />
+    </div>
+  );
+}

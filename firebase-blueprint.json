@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user account information and subscription status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "subscriptionStatus": { "type": "string", "enum": ["free", "pro"] },
+        "stripeCustomerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "subscriptionStatus"]
+    },
+    "Resume": {
+      "title": "Resume",
+      "description": "Stores user resume data and optimized versions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "object" },
+        "optimizedFor": { "type": "string" },
+        "atsScore": { "type": "number" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "content"]
+    },
+    "JobDescription": {
+      "title": "Job Description",
+      "description": "Stores analyzed job descriptions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "rawText": { "type": "string" },
+        "analysis": {
+          "type": "object",
+          "properties": {
+            "keywords": { "type": "array", "items": { "type": "string" } },
+            "requiredSkills": { "type": "array", "items": { "type": "string" } },
+            "softSkills": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "rawText"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User account documents"
+    },
+    "/resumes/{resumeId}": {
+      "schema": "Resume",
+      "description": "Resume documents"
+    },
+    "/jobs/{jobId}": {
+      "schema": "JobDescription",
+      "description": "Job description analysis documents"
+    }
+  }
+}
