@@ -98,7 +98,7 @@ async function startServer() {
 
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3-flash-preview",
         contents: `You are an expert ATS resume analyzer and career coach.
         Your job is NOT just to give basic suggestions, but to deeply analyze the resume against the job description and provide highly detailed, actionable, and specific feedback.
 
