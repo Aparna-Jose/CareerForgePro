@@ -28,6 +28,7 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
   const [isSaving, setIsSaving] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState('standard');
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // Auto-save effect
@@ -328,6 +329,27 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
                   Preview
                 </TabsTrigger>
               </TabsList>
+              
+              {/* Premium Template Selector for Preview Tab */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-slate-600">Template:</span>
+                <select 
+                  value={activeTemplate}
+                  onChange={(e) => {
+                    if (e.target.value !== 'standard' && subscriptionStatus !== 'pro') {
+                      toast.error('Premium templates require a Pro subscription!');
+                      return;
+                    }
+                    setActiveTemplate(e.target.value);
+                  }}
+                  className="bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2"
+                >
+                  <option value="standard">Standard (Free)</option>
+                  <option value="modern">Modern Professional (Pro)</option>
+                  <option value="minimal">Minimalist (Pro)</option>
+                  <option value="creative">Creative Color Block (Pro)</option>
+                </select>
+              </div>
             </div>
 
             <TabsContent value="editor" className="mt-0 focus-visible:outline-none">
@@ -345,6 +367,7 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
                       data={activeResume.content} 
                       matchedKeywords={activeResume.matchedKeywords || []}
                       missingKeywords={activeResume.missingKeywords || []}
+                      template={activeTemplate}
                     />
                   </div>
                 </motion.div>
@@ -372,6 +395,7 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
                     data={activeResume.content} 
                     matchedKeywords={activeResume.matchedKeywords || []}
                     missingKeywords={activeResume.missingKeywords || []}
+                    template={activeTemplate}
                   />
                 </motion.div>
               ) : (

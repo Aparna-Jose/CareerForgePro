@@ -21,6 +21,15 @@ export default function App() {
       if (user) {
         // Sync user to Firestore
         const userRef = doc(db, 'users', user.uid);
+
+        // Check if user just returned from a successful Stripe checkout
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        if (sessionId) {
+          await setDoc(userRef, { subscriptionStatus: 'pro' }, { merge: true });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {

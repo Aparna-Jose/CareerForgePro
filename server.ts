@@ -4,6 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
+import { db } from './src/lib/firebase.js';
+import { doc, updateDoc } from 'firebase/firestore';
 import puppeteer from 'puppeteer';
 
 import { GoogleGenAI, Type } from "@google/genai";
@@ -18,6 +20,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 });
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+
+// No admin initialization needed
 
 async function startServer() {
   const app = express();
@@ -42,8 +46,21 @@ async function startServer() {
     switch (event.type) {
       case 'checkout.session.completed':
         const session = event.data.object as Stripe.Checkout.Session;
-        // Update user subscription status in Firestore (handled via client-side polling or webhook)
-        console.log('Payment succeeded for session:', session.id);
+        const userId = session.client_reference_id;
+        
+        if (userId) {
+          try {
+            await updateDoc(doc(db, 'users', userId), {
+              subscriptionStatus: 'pro',
+              stripeSubscriptionId: session.subscription
+            });
+            console.log('Payment succeeded and user upgraded to Pro for session:', session.id);
+          } catch (error) {
+            console.error('Error updating user in Firestore:', error);
+          }
+        } else {
+          console.log('Payment succeeded but no userId found. Session:', session.id);
+        }
         break;
       default:
         console.log(`Unhandled event type ${event.type}`);
