@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { ResumeEditor } from './ResumeEditor';
 import { ResumePreview } from './ResumePreview';
 import { JDInput } from './JDInput';
@@ -9,7 +9,7 @@ import { ATSScoreMeter } from './ATSScoreMeter';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Briefcase, Sparkles, Download, History, Moon, Sun, Save, Loader2, ShieldCheck } from 'lucide-react';
+import { FileText, Briefcase, Sparkles, Download, History, Moon, Sun, Save, Loader2, ShieldCheck, Upload, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
@@ -28,8 +28,12 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
   const [isSaving, setIsSaving] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [coverLetterText, setCoverLetterText] = useState('');
+  const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState('standard');
   const resultsRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-save effect
   useEffect(() => {
@@ -64,8 +68,13 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
     });
     return () => unsubscribe();
   }, [user.uid]);
+  const isFreeLimitReached = subscriptionStatus !== 'pro' && resumes.length >= 1;
 
   const createNewResume = async () => {
+    if (isFreeLimitReached) {
+      toast.error('Free tier is limited to 1 resume. Upgrade to Pro for unlimited resumes!');
+      return;
+    }
     try {
       const newResumeData = {
         userId: user.uid,
@@ -85,6 +94,62 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
       toast.success('New resume created');
     } catch (error) {
       toast.error('Failed to create resume');
+    }
+  };
+
+  const handleImportPDF = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isFreeLimitReached) {
+      toast.error('Free tier is limited to 1 resume. Upgrade to Pro for unlimited resumes!');
+      return;
+    }
+    
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so the same file can be selected again
+    event.target.value = '';
+
+    setIsImporting(true);
+    const toastId = toast.loading('Extracting and analyzing your PDF...');
+
+    try {
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      const response = await fetch('/api/parse-pdf', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to parse PDF');
+      }
+
+      const parsedData = await response.json();
+
+      const newResumeData = {
+        userId: user.uid,
+        title: `${file.name.replace('.pdf', '')} (Imported)`,
+        content: {
+          personal: parsedData.personal || { name: user.displayName || '', email: user.email || '', phone: '', location: '', website: '' },
+          experience: parsedData.experience || [],
+          education: parsedData.education || [],
+          skills: parsedData.skills || [],
+          summary: parsedData.summary || ''
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      const docRef = await addDoc(collection(db, 'resumes'), newResumeData);
+      setActiveResume({ id: docRef.id, ...newResumeData });
+      
+      toast.success('PDF successfully imported!', { id: toastId });
+    } catch (error) {
+      console.error('PDF Import Error:', error);
+      toast.error('Failed to extract text from PDF. Ensure it is not a scanned image.', { id: toastId });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -150,7 +215,7 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
     if (!activeResume) return;
     toast.info('Generating your PDF...');
     try {
-      const resumeHtml = document.getElementById('resume-preview-content')?.innerHTML;
+      const resumeHtml = document.getElementById('resume-preview-content')?.outerHTML;
       if (!resumeHtml) throw new Error('Preview content not found');
 
       const response = await fetch('/api/generate-pdf', {
@@ -173,6 +238,62 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
     } catch (error) {
       console.error('PDF Export Error:', error);
       toast.error('Failed to export PDF');
+    }
+  };
+
+  const handleGenerateCoverLetter = async () => {
+    if (subscriptionStatus !== 'pro') {
+      toast.error('Cover letters are a Pro feature! Please upgrade.');
+      return;
+    }
+    if (!activeResume) {
+      toast.error('Please select a resume first.');
+      return;
+    }
+    
+    setIsGeneratingCoverLetter(true);
+    const toastId = toast.loading('Generating tailored cover letter...');
+    
+    try {
+      const resumeText = `
+        Name: ${activeResume.content.personal.name}
+        Summary: ${activeResume.content.summary}
+        Experience: ${activeResume.content.experience.map((e: any) => `${e.role} at ${e.company}: ${e.description}`).join('\n')}
+        Skills: ${activeResume.content.skills.join(', ')}
+      `;
+
+      const response = await fetch('/api/generate-cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeText, jdText })
+      });
+
+      if (!response.ok) throw new Error('Generation failed');
+      const result = await response.json();
+      
+      setCoverLetterText(result.coverLetter);
+      toast.success('Cover letter generated successfully!', { id: toastId });
+    } catch (error) {
+      console.error('Cover letter generation error:', error);
+      toast.error('Failed to generate cover letter.', { id: toastId });
+    } finally {
+      setIsGeneratingCoverLetter(false);
+    }
+  };
+
+  const handleDeleteResume = async (e: React.MouseEvent, resumeId: string) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this resume? This action cannot be undone.')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'resumes', resumeId));
+      if (activeResume?.id === resumeId) {
+        setActiveResume(null);
+      }
+      toast.success('Resume deleted successfully');
+    } catch (error) {
+      console.error('Error deleting resume:', error);
+      toast.error('Failed to delete resume');
     }
   };
 
@@ -295,10 +416,27 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
           <Button 
             variant="outline" 
             onClick={createNewResume} 
+            disabled={isFreeLimitReached}
             className="h-11 px-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:bg-slate-50 font-bold gap-2"
           >
             <FileText size={18} className="text-indigo-600" />
             New
+          </Button>
+          <input 
+            type="file" 
+            accept="application/pdf" 
+            ref={fileInputRef} 
+            onChange={handleImportPDF} 
+            className="hidden" 
+          />
+          <Button 
+            variant="outline" 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={isImporting || isFreeLimitReached}
+            className="h-11 px-6 rounded-2xl bg-indigo-50 border border-indigo-100 shadow-sm hover:bg-indigo-100 text-indigo-700 font-bold gap-2 transition-colors"
+          >
+            {isImporting ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+            Import PDF
           </Button>
           <Button 
             onClick={handleExportPDF}
@@ -327,6 +465,10 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
                 <TabsTrigger value="preview" className="px-6 py-2 rounded-xl gap-2 font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-md transition-all">
                   <Sparkles size={18} />
                   Preview
+                </TabsTrigger>
+                <TabsTrigger value="coverLetter" className="px-6 py-2 rounded-xl gap-2 font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-md transition-all">
+                  <FileText size={18} />
+                  Cover Letter <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800 border-amber-200">Pro</Badge>
                 </TabsTrigger>
               </TabsList>
               
@@ -362,14 +504,6 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
                     data={activeResume.content} 
                     onChange={updateResume} 
                   />
-                  <div className="hidden">
-                    <ResumePreview 
-                      data={activeResume.content} 
-                      matchedKeywords={activeResume.matchedKeywords || []}
-                      missingKeywords={activeResume.missingKeywords || []}
-                      template={activeTemplate}
-                    />
-                  </div>
                 </motion.div>
               ) : (
                 <div className="flex h-[400px] flex-col items-center justify-center rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white/30 backdrop-blur-sm p-12 text-center">
@@ -404,7 +538,51 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
                 </div>
               )}
             </TabsContent>
+
+            <TabsContent value="coverLetter" className="mt-0 focus-visible:outline-none">
+              <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm min-h-[500px] flex flex-col">
+                <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Cover Letter Generator</h2>
+                    <p className="text-sm text-slate-500">Uses your active resume and the target job description (if provided in the sidebar).</p>
+                  </div>
+                  <Button 
+                    onClick={handleGenerateCoverLetter} 
+                    disabled={isGeneratingCoverLetter}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-2 font-bold"
+                  >
+                    {isGeneratingCoverLetter ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                    Generate with AI
+                  </Button>
+                </div>
+                
+                {coverLetterText ? (
+                  <textarea 
+                    value={coverLetterText}
+                    onChange={(e) => setCoverLetterText(e.target.value)}
+                    className="w-full flex-grow p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 whitespace-pre-wrap focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none font-serif text-base leading-relaxed"
+                    spellCheck="false"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center flex-grow opacity-50">
+                    <FileText size={48} className="text-slate-300 mb-4" />
+                    <p className="text-slate-500 font-medium">Click Generate to write your tailored cover letter</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
           </Tabs>
+          {/* Always keep a hidden preview in the DOM for PDF generation */}
+          {activeResume && (
+            <div className="hidden">
+              <ResumePreview 
+                data={activeResume.content} 
+                matchedKeywords={activeResume.matchedKeywords || []}
+                missingKeywords={activeResume.missingKeywords || []}
+                template={activeTemplate}
+              />
+            </div>
+          )}
         </motion.div>
 
         {/* Middle Section: Job Description Input */}
@@ -540,7 +718,7 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {resumes.map((r, i) => (
-              <motion.button
+              <motion.div
                 key={r.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -549,12 +727,19 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
                   setActiveResume(r);
                   toast.info(`Loaded: ${r.title}`);
                 }}
-                className={`group relative rounded-[2rem] p-8 text-left transition-all border-2 ${
+                className={`group relative rounded-[2rem] p-8 text-left transition-all border-2 cursor-pointer ${
                   activeResume?.id === r.id 
                     ? 'bg-slate-950 text-white border-slate-950 shadow-2xl shadow-slate-200 scale-[1.02]' 
                     : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-50'
                 }`}
               >
+                <button 
+                  onClick={(e) => handleDeleteResume(e, r.id)}
+                  className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Delete Resume"
+                >
+                  <Trash2 size={16} />
+                </button>
                 <div className={`mb-6 h-14 w-14 rounded-2xl flex items-center justify-center transition-colors ${
                   activeResume?.id === r.id ? 'bg-white/10' : 'bg-slate-50 group-hover:bg-indigo-50'
                 }`}>
@@ -565,9 +750,9 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
                   {r.updatedAt?.seconds ? new Date(r.updatedAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Just now'}
                 </div>
                 {activeResume?.id === r.id && (
-                  <div className="absolute top-6 right-6 h-3 w-3 rounded-full bg-indigo-400 animate-pulse" />
+                  <div className="absolute top-6 right-16 h-3 w-3 rounded-full bg-indigo-400 animate-pulse" />
                 )}
-              </motion.button>
+              </motion.div>
             ))}
           </div>
         </motion.div>
