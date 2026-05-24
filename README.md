@@ -1,18 +1,28 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # CareerForgePro
-AI-powered platform for resume optimization and guidance
+CareerForgePro is a modern resume builder website that helps users create professional resumes easily with live preview and customizable templates and optimize the resume with ATS score.
 
-View your app in AI Studio: https://ai.studio/apps/94ebb909-31d6-471c-a4a7-150cb2cbedfd
+## Features
 
-## Run Locally
+* Resume content editor
+* Live resume preview
+* PDF import and export
+* Multiple resume templates
+* ATS score checking
+* Cover Letter Generator
+* Responsive and user-friendly UI
 
-**Prerequisites:**  Node.js
+## Screenshots
+*Dashboard
+<img width="1880" height="876" alt="image" src="https://github.com/user-attachments/assets/7b01b4d0-7c7f-46af-abf8-be53313fac73" />
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in `.env` to your Gemini API key
-3. Run the app:
-   `npm run dev`
+*Resume Editor
+<img width="1896" height="865" alt="image" src="https://github.com/user-attachments/assets/004046d2-1a5d-4643-96a8-26e68f958865" />
+
+*Resume Preview
+<img width="1898" height="866" alt="image" src="https://github.com/user-attachments/assets/fc7ba17d-d5f5-4a7e-81dd-66b395c41a01" />
+
+*ATS Score
+<img width="1882" height="865" alt="image" src="https://github.com/user-attachments/assets/ed57b319-f956-4798-9007-0b3a44192358" />
+
+*Cover Letter
+<img width="1886" height="875" alt="image" src="https://github.com/user-attachments/assets/d63f3a50-cfe1-48cd-a29c-2e17e91948ff" />
