@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
-import { CheckCircle2, Sparkles, Zap, ArrowRight, Star } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface HeroProps {
   onGetStarted: () => void;
@@ -40,15 +40,11 @@ export function Hero({ onGetStarted }: HeroProps) {
             <Button 
               size="lg" 
               onClick={onGetStarted} 
-              className="h-16 px-10 text-lg bg-slate-900 text-white hover:bg-slate-800 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 group"
+              className="h-16 px-10 text-lg bg-indigo-600 text-white hover:bg-indigo-700 rounded-2xl shadow-xl hover:shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95 group font-bold flex items-center justify-center gap-2"
             >
-              Start Forging Now
+              Get Started
               <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Button>
-            <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/50 border border-slate-200 text-slate-600 font-medium">
-              <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-              <span>4.9/5 Rating</span>
-            </div>
           </motion.div>
 
 

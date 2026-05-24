@@ -40,6 +40,25 @@ export function ResumeEditor({ data, onChange }: ResumeEditorProps) {
     onChange({ ...data, experience: newExp });
   };
 
+  const addEducation = () => {
+    const newEdu = { school: '', degree: '', year: '' };
+    onChange({
+      ...data,
+      education: [...(data.education || []), newEdu]
+    });
+  };
+
+  const updateEducation = (index: number, field: string, value: string) => {
+    const newEdu = [...(data.education || [])];
+    newEdu[index] = { ...newEdu[index], [field]: value };
+    onChange({ ...data, education: newEdu });
+  };
+
+  const removeEducation = (index: number) => {
+    const newEdu = (data.education || []).filter((_: any, i: number) => i !== index);
+    onChange({ ...data, education: newEdu });
+  };
+
   return (
     <ScrollArea className="h-[calc(100vh-250px)] pr-4">
       <div className="space-y-8 pb-12">
@@ -148,6 +167,61 @@ export function ResumeEditor({ data, onChange }: ResumeEditorProps) {
                       value={exp.description} 
                       onChange={(e) => updateExperience(i, 'description', e.target.value)} 
                     />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Education */}
+        <section className="glass-card p-6 rounded-2xl">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-800">Education</h3>
+            <Button variant="outline" size="sm" onClick={addEducation} className="gap-2 bg-white/50 border-black/5 hover:bg-white">
+              <Plus size={14} />
+              Add Education
+            </Button>
+          </div>
+          <div className="space-y-4">
+            {(data.education || []).map((edu: any, i: number) => (
+              <Card key={i} className="relative overflow-hidden border-black/5 bg-white/40 shadow-none">
+                <CardContent className="p-6">
+                  <div className="mb-4 flex items-start justify-between">
+                    <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label className="text-slate-600">School/University</Label>
+                        <Input 
+                          className="bg-white/50 border-black/5 focus:bg-white"
+                          value={edu.school} 
+                          onChange={(e) => updateEducation(i, 'school', e.target.value)} 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-slate-600">Degree</Label>
+                        <Input 
+                          className="bg-white/50 border-black/5 focus:bg-white"
+                          value={edu.degree} 
+                          onChange={(e) => updateEducation(i, 'degree', e.target.value)} 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-slate-600">Year</Label>
+                        <Input 
+                          className="bg-white/50 border-black/5 focus:bg-white"
+                          value={edu.year} 
+                          onChange={(e) => updateEducation(i, 'year', e.target.value)} 
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => removeEducation(i)}
+                      className="text-slate-400 hover:text-rose-500 hover:bg-rose-50"
+                    >
+                      <Trash2 size={18} />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

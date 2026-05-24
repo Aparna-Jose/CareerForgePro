@@ -82,14 +82,7 @@ export function Navbar({ user, onSignIn, onSignOut, onViewChange, currentView, s
                 <LogOut size={20} />
               </Button>
             </>
-          ) : (
-            <Button 
-              onClick={onSignIn} 
-              className="h-11 px-8 rounded-full bg-slate-950 text-white hover:bg-slate-800 shadow-xl shadow-slate-200 font-bold"
-            >
-              Get Started
-            </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </nav>

@@ -171,6 +171,7 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
         Name: ${activeResume.content.personal.name}
         Summary: ${activeResume.content.summary}
         Experience: ${activeResume.content.experience.map((e: any) => `${e.role} at ${e.company}: ${e.description}`).join('\n')}
+        Education: ${(activeResume.content.education || []).map((e: any) => `${e.degree} from ${e.school} (${e.year})`).join('\n')}
         Skills: ${activeResume.content.skills.join(', ')}
       `;
 
@@ -259,6 +260,7 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
         Name: ${activeResume.content.personal.name}
         Summary: ${activeResume.content.summary}
         Experience: ${activeResume.content.experience.map((e: any) => `${e.role} at ${e.company}: ${e.description}`).join('\n')}
+        Education: ${(activeResume.content.education || []).map((e: any) => `${e.degree} from ${e.school} (${e.year})`).join('\n')}
         Skills: ${activeResume.content.skills.join(', ')}
       `;
 

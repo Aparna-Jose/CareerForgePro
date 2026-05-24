@@ -333,6 +333,23 @@ export function ResumePreview({ data, matchedKeywords = [], missingKeywords = []
           </section>
         )}
 
+        {education && education.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-indigo-600 border-b border-slate-200 pb-1 mb-3">Education</h2>
+            <div className="space-y-4">
+              {education.map((edu: any, i: number) => (
+                <div key={i}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <h3 className="font-bold text-slate-900 text-base">{edu.school}</h3>
+                    <span className="text-xs font-medium text-slate-500">{edu.year}</span>
+                  </div>
+                  <div className="text-sm font-medium text-slate-700">{edu.degree}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {skills && skills.length > 0 && (
           <section>
             <h2 className="text-sm font-bold uppercase tracking-widest text-indigo-600 border-b border-slate-200 pb-1 mb-3">Core Competencies</h2>
