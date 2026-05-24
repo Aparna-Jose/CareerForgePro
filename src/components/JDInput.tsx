@@ -32,18 +32,15 @@ export function JDInput({ value, onChange, onOptimize, isLoading }: JDInputProps
         {isLoading ? (
           <>
             <Loader2 className="animate-spin" size={18} />
-            Optimizing...
+            Calculating ATS Score...
           </>
         ) : (
           <>
             <Sparkles size={18} />
-            Optimize Resume
+            Calculate ATS Score
           </>
         )}
       </Button>
-      <p className="mt-3 text-center text-[10px] text-slate-400 uppercase tracking-widest font-bold">
-        Powered by Gemini 1.5 Flash
-      </p>
     </div>
   );
 }

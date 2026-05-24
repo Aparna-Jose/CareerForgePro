@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
 interface ResumeEditorProps {
@@ -60,8 +59,7 @@ export function ResumeEditor({ data, onChange }: ResumeEditorProps) {
   };
 
   return (
-    <ScrollArea className="h-[calc(100vh-250px)] pr-4">
-      <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12">
         {/* Personal Info */}
         <section className="glass-card p-6 rounded-2xl">
           <h3 className="mb-4 text-lg font-bold text-slate-800">Personal Information</h3>
@@ -240,6 +238,5 @@ export function ResumeEditor({ data, onChange }: ResumeEditorProps) {
           />
         </section>
       </div>
-    </ScrollArea>
   );
 }

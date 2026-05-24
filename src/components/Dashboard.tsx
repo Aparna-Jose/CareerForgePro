@@ -6,10 +6,11 @@ import { ResumeEditor } from './ResumeEditor';
 import { ResumePreview } from './ResumePreview';
 import { JDInput } from './JDInput';
 import { ATSScoreMeter } from './ATSScoreMeter';
+import { Pricing } from './Pricing';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Briefcase, Sparkles, Download, History, Moon, Sun, Save, Loader2, ShieldCheck, Upload, Trash2 } from 'lucide-react';
+import { FileText, Briefcase, Sparkles, Download, History, Moon, Sun, Save, Loader2, ShieldCheck, Upload, Trash2, Search, LogOut, User as UserIcon, ArrowLeft, Plus, Layout, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
@@ -17,9 +18,10 @@ interface DashboardProps {
   user: User;
   subscriptionStatus: string;
   nextBillingDate: string | null;
+  onSignOut: () => void;
 }
 
-export function Dashboard({ user, subscriptionStatus, nextBillingDate }: DashboardProps) {
+export function Dashboard({ user, subscriptionStatus, nextBillingDate, onSignOut }: DashboardProps) {
   const [resumes, setResumes] = useState<any[]>([]);
   const [activeResume, setActiveResume] = useState<any>(null);
   const [jdText, setJdText] = useState('');
@@ -32,8 +34,54 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
   const [coverLetterText, setCoverLetterText] = useState('');
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState('standard');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'resumes' | 'ats' | 'cover-letter' | 'history' | 'pricing'>('resumes');
+  const [workspaceMode, setWorkspaceMode] = useState<'editor' | 'preview'>('editor');
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [isMobile, setIsMobile] = useState(false);
+  const isResizingSidebar = useRef(false);
   const resultsRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+
+
+  const startResizingSidebar = (mouseDownEvent: React.MouseEvent) => {
+    mouseDownEvent.preventDefault();
+    isResizingSidebar.current = true;
+    
+    // Add global body styles to lock resize cursor and prevent selection
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    
+    const handleMouseMove = (mouseMoveEvent: MouseEvent) => {
+      if (!isResizingSidebar.current) return;
+      
+      const newWidthPx = mouseMoveEvent.clientX;
+      if (newWidthPx >= 200 && newWidthPx <= 400) {
+        setSidebarWidth(newWidthPx);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizingSidebar.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   // Auto-save effect
   useEffect(() => {
@@ -330,8 +378,20 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
     }
   };
 
+  const filteredResumes = resumes.filter(r => 
+    r.title?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const navItems = [
+    { id: 'resumes', label: 'My Resumes', icon: FileText },
+    { id: 'ats', label: 'ATS Score', icon: ShieldCheck },
+    { id: 'cover-letter', label: 'Cover Letter', icon: Sparkles },
+    { id: 'history', label: 'History', icon: History },
+    { id: 'pricing', label: 'Pricing', icon: CreditCard }
+  ];
+
   return (
-    <div className={`container mx-auto px-6 py-10 ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`flex min-h-screen bg-zinc-50 text-zinc-900 font-sans ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : ''}`}>
       <AnimatePresence>
         {isRedirecting && (
           <motion.div
@@ -372,392 +432,566 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate }: Dashboa
           </motion.div>
         )}
       </AnimatePresence>
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end"
+
+      {/* LEFT SIDEBAR */}
+      <aside 
+        style={{ width: isMobile ? '256px' : `${sidebarWidth}px` }}
+        className="border-r border-slate-200/80 bg-white/70 backdrop-blur-xl flex flex-col shrink-0 sticky top-0 h-screen overflow-y-auto"
       >
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h2 className="text-4xl font-display font-extrabold tracking-tight text-slate-950">
-              Workspace
-            </h2>
-            {subscriptionStatus === 'pro' && (
-              <Badge className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                Pro
-              </Badge>
-            )}
+        <div className="h-20 flex items-center gap-2.5 px-6 border-b border-slate-200/60">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white shadow-md shadow-slate-200">
+            <Layout size={18} className="fill-white" />
           </div>
-          <p className="text-slate-500 font-medium">
-            {activeResume ? `Editing: ${activeResume.title}` : 'Select a resume to begin your journey.'}
-          </p>
+          <span className="text-xl font-display font-bold tracking-tight text-slate-950">
+            CareerForge <span className="text-indigo-600">Pro</span>
+          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <AnimatePresence>
-            {isSaving && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100"
+
+        <nav className="flex-grow p-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id as any);
+                }}
+                className={`w-full flex items-center gap-3.5 px-4.5 py-3 rounded-xl font-bold text-sm transition-all duration-200 cursor-pointer ${
+                  isActive 
+                    ? 'bg-indigo-50 text-indigo-600 shadow-sm border border-indigo-100/50' 
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/80'
+                }`}
               >
-                <Save size={12} className="animate-pulse" />
-                Changes Saved
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <div className="h-10 w-[1px] bg-slate-200 mx-2 hidden sm:block" />
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="h-11 w-11 rounded-2xl bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-all"
-          >
-            {isDarkMode ? <Sun size={20} className="text-amber-500" /> : <Moon size={20} className="text-slate-600" />}
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={createNewResume} 
-            disabled={isFreeLimitReached}
-            className="h-11 px-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:bg-slate-50 font-bold gap-2"
-          >
-            <FileText size={18} className="text-indigo-600" />
-            New
-          </Button>
-          <input 
-            type="file" 
-            accept="application/pdf" 
-            ref={fileInputRef} 
-            onChange={handleImportPDF} 
-            className="hidden" 
-          />
-          <Button 
-            variant="outline" 
-            onClick={() => fileInputRef.current?.click()} 
-            disabled={isImporting || isFreeLimitReached}
-            className="h-11 px-6 rounded-2xl bg-indigo-50 border border-indigo-100 shadow-sm hover:bg-indigo-100 text-indigo-700 font-bold gap-2 transition-colors"
-          >
-            {isImporting ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-            Import PDF
-          </Button>
-          <Button 
-            onClick={handleExportPDF}
-            className="h-11 px-6 rounded-2xl bg-slate-950 text-white hover:bg-slate-800 shadow-xl shadow-slate-200 font-bold gap-2 group"
-          >
-            <Download size={18} className="transition-transform group-hover:translate-y-0.5" />
-            Export
-          </Button>
-        </div>
-      </motion.div>
+                <Icon size={18} className={isActive ? 'text-indigo-600' : 'text-slate-400'} />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
-      <div className="max-w-5xl mx-auto space-y-12">
-        {/* Top Section: Editor & Preview */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
-        >
-          <Tabs defaultValue="editor" className="w-full">
-            <div className="mb-6 flex items-center justify-between">
-              <TabsList className="bg-slate-200/50 p-1.5 rounded-2xl backdrop-blur-sm border border-slate-200/50">
-                <TabsTrigger value="editor" className="px-6 py-2 rounded-xl gap-2 font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-md transition-all">
-                  <FileText size={18} />
-                  Editor
-                </TabsTrigger>
-                <TabsTrigger value="preview" className="px-6 py-2 rounded-xl gap-2 font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-md transition-all">
-                  <Sparkles size={18} />
-                  Preview
-                </TabsTrigger>
-                <TabsTrigger value="coverLetter" className="px-6 py-2 rounded-xl gap-2 font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-md transition-all">
-                  <FileText size={18} />
-                  Cover Letter <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800 border-amber-200">Pro</Badge>
-                </TabsTrigger>
-              </TabsList>
-              
-              {/* Premium Template Selector for Preview Tab */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-slate-600">Template:</span>
-                <select 
-                  value={activeTemplate}
-                  onChange={(e) => {
-                    if (e.target.value !== 'standard' && subscriptionStatus !== 'pro') {
-                      toast.error('Premium templates require a Pro subscription!');
-                      return;
-                    }
-                    setActiveTemplate(e.target.value);
-                  }}
-                  className="bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2"
-                >
-                  <option value="standard">Standard (Free)</option>
-                  <option value="modern">Modern Professional (Pro)</option>
-                  <option value="minimal">Minimalist (Pro)</option>
-                  <option value="creative">Creative Color Block (Pro)</option>
-                </select>
-              </div>
+        {subscriptionStatus !== 'pro' && (
+          <div className="p-4 border-t border-slate-100 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 m-4 rounded-2xl border border-indigo-100/50 relative overflow-hidden group">
+            <div className="absolute -right-2 -top-2 h-16 w-16 bg-indigo-500/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="relative z-10 space-y-3">
+              <h4 className="font-bold text-slate-950 text-xs flex items-center gap-1.5">
+                <Sparkles size={12} className="text-indigo-600 animate-pulse" />
+                Upgrade to Pro
+              </h4>
+              <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
+                Get 10x more interviews with unlimited resumes and cover letters.
+              </p>
+              <Button 
+                size="sm"
+                onClick={() => setActiveTab('pricing')}
+                className="w-full h-8 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 font-bold text-[10px] gap-1 shadow-md shadow-indigo-100 cursor-pointer"
+              >
+                Upgrade Now
+              </Button>
             </div>
+          </div>
+        )}
+      </aside>
 
-            <TabsContent value="editor" className="mt-0 focus-visible:outline-none">
-              {activeResume ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <ResumeEditor 
-                    data={activeResume.content} 
-                    onChange={updateResume} 
-                  />
-                </motion.div>
-              ) : (
-                <div className="flex h-[400px] flex-col items-center justify-center rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white/30 backdrop-blur-sm p-12 text-center">
-                  <div className="h-20 w-20 rounded-3xl bg-slate-50 flex items-center justify-center mb-6 shadow-inner">
-                    <FileText size={40} className="text-slate-300" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Resume Selected</h3>
-                  <p className="text-slate-500 max-w-xs mb-8">Create a new resume or select one from your library to start optimizing.</p>
-                  <Button onClick={createNewResume} size="lg" className="rounded-2xl px-8 bg-indigo-600">
-                    Create Your First Resume
-                  </Button>
-                </div>
-              )}
-            </TabsContent>
+      {/* SIDEBAR RESIZE DIVIDER */}
+      <div
+        onMouseDown={startResizingSidebar}
+        className="hidden lg:flex w-2 cursor-col-resize self-stretch select-none relative z-50"
+        style={{ marginLeft: '-4px', marginRight: '-4px' }}
+      />
 
-            <TabsContent value="preview" className="mt-0 focus-visible:outline-none">
-              {activeResume ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                >
-                  <ResumePreview 
-                    data={activeResume.content} 
-                    matchedKeywords={activeResume.matchedKeywords || []}
-                    missingKeywords={activeResume.missingKeywords || []}
-                    template={activeTemplate}
-                  />
-                </motion.div>
-              ) : (
-                <div className="flex h-[400px] items-center justify-center rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white/30 backdrop-blur-sm">
-                  <p className="text-slate-500">Select a resume to see preview.</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="coverLetter" className="mt-0 focus-visible:outline-none">
-              <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm min-h-[500px] flex flex-col">
-                <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900">Cover Letter Generator</h2>
-                    <p className="text-sm text-slate-500">Uses your active resume and the target job description (if provided in the sidebar).</p>
-                  </div>
-                  <Button 
-                    onClick={handleGenerateCoverLetter} 
-                    disabled={isGeneratingCoverLetter}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-2 font-bold"
-                  >
-                    {isGeneratingCoverLetter ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                    Generate with AI
-                  </Button>
-                </div>
-                
-                {coverLetterText ? (
-                  <textarea 
-                    value={coverLetterText}
-                    onChange={(e) => setCoverLetterText(e.target.value)}
-                    className="w-full flex-grow p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 whitespace-pre-wrap focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none font-serif text-base leading-relaxed"
-                    spellCheck="false"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center flex-grow opacity-50">
-                    <FileText size={48} className="text-slate-300 mb-4" />
-                    <p className="text-slate-500 font-medium">Click Generate to write your tailored cover letter</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-          {/* Always keep a hidden preview in the DOM for PDF generation */}
-          {activeResume && (
-            <div className="hidden">
-              <ResumePreview 
-                data={activeResume.content} 
-                matchedKeywords={activeResume.matchedKeywords || []}
-                missingKeywords={activeResume.missingKeywords || []}
-                template={activeTemplate}
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-grow flex flex-col min-w-0 min-h-screen">
+        {/* HEADER */}
+        <header className="h-20 border-b border-slate-200/80 bg-white/70 backdrop-blur-xl flex items-center justify-between px-8 shrink-0 sticky top-0 z-40">
+          {activeTab === 'resumes' && activeResume !== null ? (
+            /* Editing Resume Header */
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setActiveResume(null)}
+                className="h-10 w-10 rounded-xl hover:bg-slate-100 cursor-pointer"
+              >
+                <ArrowLeft size={20} className="text-slate-600" />
+              </Button>
+              <input
+                type="text"
+                value={activeResume.title}
+                onChange={async (e) => {
+                  const newTitle = e.target.value;
+                  setActiveResume((prev: any) => ({ ...prev, title: newTitle }));
+                  try {
+                    await updateDoc(doc(db, 'resumes', activeResume.id), {
+                      title: newTitle,
+                      updatedAt: serverTimestamp()
+                    });
+                  } catch (error) {
+                    handleFirestoreError(error, OperationType.UPDATE, `resumes/${activeResume.id}`);
+                  }
+                }}
+                className="text-lg font-display font-extrabold text-slate-950 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-500 outline-none px-1 py-0.5 rounded transition-all w-60"
+              />
+            </div>
+          ) : (
+            /* Standard Dashboard Header */
+            <div className="relative w-72">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search resumes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-slate-50/50 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-semibold"
               />
             </div>
           )}
-        </motion.div>
 
-        {/* Middle Section: Job Description Input */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-8"
-        >
-          <div className="flex flex-col md:flex-row gap-8 items-start">
-            <div className="flex-1 w-full">
-              <JDInput value={jdText} onChange={setJdText} onOptimize={handleOptimize} isLoading={isOptimizing} />
-            </div>
-            
-            {/* Subscription Status Card */}
-            <div className="w-full md:w-80 glass-card rounded-[2.5rem] p-8 border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 h-24 w-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
-                    <ShieldCheck size={20} className="text-indigo-600" />
+          <div className="flex items-center gap-4">
+            {/* User Account / Profile block */}
+            <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-sm">
+              <div className="h-7 w-7 overflow-hidden rounded-full border border-slate-200">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt={user.displayName || ''} referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-slate-100">
+                    <UserIcon size={12} />
                   </div>
-                  <Badge className={`px-3 py-0.5 rounded-full text-[9px] font-black tracking-widest ${subscriptionStatus === 'pro' ? 'bg-indigo-600' : 'bg-slate-400'}`}>
-                    {subscriptionStatus.toUpperCase()}
-                  </Badge>
-                </div>
-                <div className="space-y-3">
-                  <h4 className="font-bold text-slate-950 text-sm">Account Status</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    {subscriptionStatus === 'pro' 
-                      ? 'Full premium access enabled.' 
-                      : 'Upgrade for unlimited AI power.'}
-                  </p>
-                  {subscriptionStatus === 'pro' ? (
-                    nextBillingDate && (
-                      <div className="pt-3 border-t border-indigo-100 flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Next Billing</span>
-                        <span className="text-xs font-bold text-indigo-600">{new Date(nextBillingDate).toLocaleDateString()}</span>
-                      </div>
-                    )
-                  ) : (
-                    <Button 
-                      onClick={handleUpgrade}
-                      disabled={isUpgrading || isRedirecting}
-                      className="w-full mt-2 h-10 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 font-bold text-xs gap-2 shadow-lg shadow-indigo-100"
-                    >
-                      {isUpgrading ? (
-                        <>
-                          <Loader2 size={14} className="animate-spin" />
-                          {isRedirecting ? 'Redirecting...' : 'Processing...'}
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles size={14} />
-                          Upgrade to Pro
-                        </>
+                )}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-900 leading-none">{user.displayName}</span>
+                {subscriptionStatus === 'pro' && (
+                  <span className="text-[8px] font-black text-indigo-600 uppercase tracking-tighter mt-0.5">Pro Member</span>
+                )}
+              </div>
+            </div>
+
+            {/* Sign Out Button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onSignOut} 
+              className="h-10 w-10 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+            >
+              <LogOut size={18} />
+            </Button>
+          </div>
+        </header>
+
+        {/* WORKSPACE / BODY */}
+        <main className="flex-grow p-8 overflow-y-auto">
+          {activeTab === 'resumes' ? (
+            /* RESUMES VIEW */
+            activeResume !== null ? (
+              /* ACTIVE RESUME split screen workspace */
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <AnimatePresence>
+                      {isSaving && (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100"
+                        >
+                          <Save size={12} className="animate-pulse" />
+                          Auto-saving...
+                        </motion.div>
                       )}
+                    </AnimatePresence>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setIsDarkMode(!isDarkMode)}
+                      className="h-10 w-10 rounded-xl bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-all cursor-pointer"
+                    >
+                      {isDarkMode ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-slate-600" />}
                     </Button>
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      ref={fileInputRef} 
+                      onChange={handleImportPDF} 
+                      className="hidden" 
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()} 
+                      disabled={isImporting || isFreeLimitReached}
+                      className="h-10 px-4 rounded-xl bg-indigo-50 border border-indigo-100 shadow-sm hover:bg-indigo-100 text-indigo-700 font-bold gap-2 transition-colors cursor-pointer"
+                    >
+                      {isImporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                      Import PDF
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={handleExportPDF}
+                      className="h-10 px-4 rounded-xl bg-slate-950 text-white hover:bg-slate-800 shadow-lg shadow-slate-200 font-bold gap-2 group cursor-pointer"
+                    >
+                      <Download size={16} className="transition-transform group-hover:translate-y-0.5" />
+                      Export PDF
+                    </Button>
+                  </div>
+                </div>
+
+                {/* WORKSPACE MODE TABS */}
+                <div className="flex border-b border-slate-200/80 mb-6 gap-2">
+                  <button
+                    onClick={() => setWorkspaceMode('editor')}
+                    className={`pb-3 px-6 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+                      workspaceMode === 'editor'
+                        ? 'border-indigo-600 text-indigo-600 font-extrabold'
+                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    Resume Content Editor
+                  </button>
+                  <button
+                    onClick={() => setWorkspaceMode('preview')}
+                    className={`pb-3 px-6 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+                      workspaceMode === 'preview'
+                        ? 'border-indigo-600 text-indigo-600 font-extrabold'
+                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    Live Preview
+                  </button>
+                </div>
+
+                <div className="w-full">
+                  {workspaceMode === 'editor' ? (
+                    /* EDITOR PANEL */
+                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm max-w-5xl mx-auto">
+                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2 border-b border-slate-100 pb-2 text-slate-900">
+                        <FileText size={18} className="text-indigo-600" />
+                        Resume Content Editor
+                      </h3>
+                      <ResumeEditor data={activeResume.content} onChange={updateResume} />
+                    </div>
+                  ) : (
+                    /* PREVIEW PANEL */
+                    <div className="max-w-5xl mx-auto space-y-4">
+                      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-4">
+                          <span className="flex items-center gap-2 font-bold text-slate-900">
+                            <Sparkles size={18} className="text-indigo-600 animate-pulse" />
+                            Live Preview
+                          </span>
+                          
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-slate-500">Design Template:</span>
+                            <select 
+                              value={activeTemplate}
+                              onChange={(e) => {
+                                if (e.target.value !== 'standard' && subscriptionStatus !== 'pro') {
+                                    toast.error('Premium templates require a Pro subscription!');
+                                    return;
+                                }
+                                setActiveTemplate(e.target.value);
+                              }}
+                              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 outline-none font-bold"
+                            >
+                              <option value="standard">Standard (Free)</option>
+                              <option value="modern">Modern Professional (Pro)</option>
+                              <option value="minimal">Minimalist (Pro)</option>
+                              <option value="creative">Creative Color Block (Pro)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="border border-slate-100 rounded-2xl bg-slate-50/50 p-6 flex justify-center">
+                          <ResumePreview 
+                            data={activeResume.content} 
+                            matchedKeywords={activeResume.matchedKeywords || []}
+                            missingKeywords={activeResume.missingKeywords || []}
+                            template={activeTemplate}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Bottom Section: Results (Full Width) */}
-        <div ref={resultsRef} className="relative w-full">
-          <AnimatePresence mode="wait">
-            {isOptimizing ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="glass-card rounded-[2.5rem] p-16 flex flex-col items-center justify-center text-center space-y-8 border-indigo-100"
-              >
-                <div className="relative">
-                  <div className="h-24 w-24 rounded-[2rem] bg-indigo-50 flex items-center justify-center">
-                    <Loader2 className="h-12 w-12 text-indigo-600 animate-spin" />
-                  </div>
-                  <motion.div 
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="absolute -top-3 -right-3 h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center shadow-md"
-                  >
-                    <Sparkles size={20} className="text-amber-500" />
-                  </motion.div>
-                </div>
+            ) : (
+              /* RESUMES DIRECTORY GRID (Home Screen) */
+              <div className="space-y-10">
+                {/* Greetings and summary panel */}
                 <div>
-                  <h4 className="text-3xl font-display font-extrabold text-slate-950 mb-3">Analyzing Your Potential</h4>
-                  <p className="text-lg text-slate-500 max-w-md mx-auto leading-relaxed">Our AI is meticulously scanning every bullet point to ensure you stand out from the crowd.</p>
+                  <h2 className="text-3xl font-display font-extrabold tracking-tight text-slate-950">
+                    Welcome, {user.displayName?.split(' ')[0] || 'User'}
+                  </h2>
+                  <p className="text-slate-500 font-medium">Manage and optimize your professional resumes below.</p>
                 </div>
-              </motion.div>
-            ) : activeResume && activeResume.atsScore !== undefined && (
-              <motion.div
-                key="results"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-12"
-              >
-                <div className="text-center space-y-2">
-                  <h3 className="text-3xl font-display font-extrabold text-slate-950">Optimization Results</h3>
-                  <p className="text-slate-500">Based on your latest resume content and job description.</p>
-                </div>
-                
-                <ATSScoreMeter 
-                  score={activeResume.atsScore || 0} 
-                  suggestions={activeResume.suggestions || []} 
-                  matchedKeywords={activeResume.matchedKeywords || []}
-                  missingKeywords={activeResume.missingKeywords || []}
-                  weakAreas={activeResume.weakAreas || []}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
 
-        {/* Library Section */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="glass-card rounded-[2.5rem] p-10"
-        >
-          <div className="flex items-center justify-between mb-10">
-            <h3 className="flex items-center gap-4 text-2xl font-display font-extrabold text-slate-950">
-              <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                <History size={24} className="text-indigo-600" />
+                {/* Dashboard stats cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                      <FileText size={24} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Resumes</span>
+                      <span className="text-2xl font-black text-slate-900">{resumes.length}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                      <Save size={24} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Active Drafts</span>
+                      <span className="text-2xl font-black text-slate-900">
+                        {resumes.filter(r => r.atsScore === undefined).length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resumes Grid */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-slate-900">Your Resumes</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Create New resume dashed card */}
+                    <div 
+                      onClick={createNewResume}
+                      className={`rounded-[2rem] p-8 border-2 border-dashed border-slate-200 hover:border-indigo-400 bg-white/40 hover:bg-indigo-50/20 text-center flex flex-col items-center justify-center min-h-[220px] transition-all cursor-pointer ${
+                        isFreeLimitReached ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      <div className="h-12 w-12 rounded-2xl bg-slate-50 hover:bg-indigo-100/50 flex items-center justify-center text-slate-400 hover:text-indigo-600 mb-4 shadow-inner">
+                        <Plus size={24} />
+                      </div>
+                      <span className="font-bold text-slate-900 block text-base mb-1">Create New Resume</span>
+                      <span className="text-xs text-slate-400 font-medium">
+                        {isFreeLimitReached ? 'Upgrade for Unlimited' : 'Draft from scratch'}
+                      </span>
+                    </div>
+
+                    {/* Active resumes */}
+                    {filteredResumes.map((r, i) => (
+                      <motion.div
+                        key={r.id}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 * i }}
+                        onClick={() => {
+                          setActiveResume(r);
+                          toast.info(`Loaded: ${r.title}`);
+                        }}
+                        className="group relative rounded-[2rem] p-8 text-left bg-white border-2 border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-50/50 transition-all cursor-pointer min-h-[220px] flex flex-col justify-between"
+                      >
+                        <button 
+                          onClick={(e) => handleDeleteResume(e, r.id)}
+                          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete Resume"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <div>
+                          <div className="mb-4 h-12 w-12 rounded-2xl bg-slate-50 group-hover:bg-indigo-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
+                            <FileText size={24} />
+                          </div>
+                          <div className="font-bold truncate text-lg text-slate-900 mb-1">{r.title}</div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-6">
+                          <span className="text-xs text-slate-400 font-medium">
+                            {r.updatedAt?.seconds ? new Date(r.updatedAt.seconds * 1000).toLocaleDateString() : 'Just now'}
+                          </span>
+                          {r.atsScore !== undefined && (
+                            <Badge className="bg-indigo-500 text-white text-[9px] font-black tracking-wide rounded-full px-2 py-0.5">
+                              ATS: {r.atsScore}%
+                            </Badge>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              Resume Library
-            </h3>
-            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{resumes.length} Saved Versions</span>
-          </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {resumes.map((r, i) => (
-              <motion.div
-                key={r.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * i }}
-                onClick={() => {
-                  setActiveResume(r);
-                  toast.info(`Loaded: ${r.title}`);
-                }}
-                className={`group relative rounded-[2rem] p-8 text-left transition-all border-2 cursor-pointer ${
-                  activeResume?.id === r.id 
-                    ? 'bg-slate-950 text-white border-slate-950 shadow-2xl shadow-slate-200 scale-[1.02]' 
-                    : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-50'
-                }`}
-              >
-                <button 
-                  onClick={(e) => handleDeleteResume(e, r.id)}
-                  className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                  title="Delete Resume"
-                >
-                  <Trash2 size={16} />
-                </button>
-                <div className={`mb-6 h-14 w-14 rounded-2xl flex items-center justify-center transition-colors ${
-                  activeResume?.id === r.id ? 'bg-white/10' : 'bg-slate-50 group-hover:bg-indigo-50'
-                }`}>
-                  <FileText size={28} className={activeResume?.id === r.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600'} />
+            )
+          ) : activeTab === 'ats' ? (
+            /* ATS SCORE VIEW */
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-2xl font-display font-extrabold text-slate-950">ATS Score Optimizer</h3>
+                <p className="text-slate-500">Scan and align your resume with a specific job description to maximize recruiter impact.</p>
+              </div>
+              
+              {!activeResume ? (
+                <div className="flex h-[300px] flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-slate-200 bg-white/30 p-8 text-center">
+                  <FileText size={40} className="text-slate-300 mb-4" />
+                  <h4 className="text-lg font-bold text-slate-900 mb-1">No Active Resume</h4>
+                  <p className="text-sm text-slate-500 max-w-xs mb-6">Select or create a resume under "My Resumes" first to optimize.</p>
+                  <Button onClick={() => setActiveTab('resumes')} className="bg-indigo-600 rounded-xl cursor-pointer">
+                    Go to Resumes
+                  </Button>
                 </div>
-                <div className="font-bold truncate text-xl mb-2">{r.title}</div>
-                <div className={`text-sm font-medium ${activeResume?.id === r.id ? 'text-slate-400' : 'text-slate-400'}`}>
-                  {r.updatedAt?.seconds ? new Date(r.updatedAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Just now'}
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <JDInput 
+                      value={jdText} 
+                      onChange={setJdText} 
+                      onOptimize={handleOptimize} 
+                      isLoading={isOptimizing} 
+                    />
+                  </div>
+                  
+                  <div>
+                    {isOptimizing ? (
+                      <div className="glass-card rounded-[2rem] p-12 flex flex-col items-center justify-center text-center space-y-6 border-indigo-50 min-h-[400px]">
+                        <Loader2 className="h-10 w-10 text-indigo-600 animate-spin" />
+                        <div>
+                          <h4 className="text-xl font-bold text-slate-950 mb-2">Analyzing Match Score</h4>
+                          <p className="text-sm text-slate-500 max-w-xs leading-relaxed">Scanning keywords and alignment details...</p>
+                        </div>
+                      </div>
+                    ) : activeResume.atsScore !== undefined ? (
+                      <ATSScoreMeter 
+                        score={activeResume.atsScore || 0} 
+                        suggestions={activeResume.suggestions || []} 
+                        matchedKeywords={activeResume.matchedKeywords || []}
+                        missingKeywords={activeResume.missingKeywords || []}
+                        weakAreas={activeResume.weakAreas || []}
+                      />
+                    ) : (
+                      <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-slate-200 bg-white/30 p-8 text-center">
+                        <ShieldCheck size={48} className="text-slate-300 mb-4 animate-pulse" />
+                        <h4 className="text-lg font-bold text-slate-900 mb-1">Ready for Scan</h4>
+                        <p className="text-sm text-slate-500 max-w-xs">Enter a job description on the left and click Optimize to run the scan.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {activeResume?.id === r.id && (
-                  <div className="absolute top-6 right-16 h-3 w-3 rounded-full bg-indigo-400 animate-pulse" />
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+              )}
+            </div>
+          ) : activeTab === 'cover-letter' ? (
+            /* COVER LETTER VIEW */
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-2xl font-display font-extrabold text-slate-950">AI Cover Letter Generator</h3>
+                <p className="text-slate-500">Draft a tailored cover letter referencing your achievements and the target job description.</p>
+              </div>
+              
+              {!activeResume ? (
+                <div className="flex h-[300px] flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-slate-200 bg-white/30 p-8 text-center">
+                  <FileText size={40} className="text-slate-300 mb-4" />
+                  <h4 className="text-lg font-bold text-slate-900 mb-1">No Active Resume</h4>
+                  <p className="text-sm text-slate-500 max-w-xs mb-6">Select a resume under "My Resumes" to base your cover letter on.</p>
+                  <Button onClick={() => setActiveTab('resumes')} className="bg-indigo-600 rounded-xl cursor-pointer">
+                    Go to Resumes
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm min-h-[500px] flex flex-col">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+                    <div>
+                      <h4 className="text-lg font-bold text-slate-900">Tailored Cover Letter</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Drafted for: {activeResume.title}</p>
+                    </div>
+                    <Button 
+                      onClick={handleGenerateCoverLetter} 
+                      disabled={isGeneratingCoverLetter}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-2 font-bold self-end sm:self-auto cursor-pointer"
+                    >
+                      {isGeneratingCoverLetter ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                      Generate with AI
+                    </Button>
+                  </div>
+                  
+                  {coverLetterText ? (
+                    <textarea 
+                      value={coverLetterText}
+                      onChange={(e) => setCoverLetterText(e.target.value)}
+                      className="w-full flex-grow p-5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 whitespace-pre-wrap focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none font-serif text-base leading-relaxed"
+                      spellCheck="false"
+                      rows={12}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center flex-grow py-12 opacity-50">
+                      <FileText size={48} className="text-slate-300 mb-4" />
+                      <p className="text-slate-500 font-medium font-sans">Click Generate to write your tailored cover letter</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'history' ? (
+            /* HISTORY VIEW */
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-2xl font-display font-extrabold text-slate-950">Activity History</h3>
+                <p className="text-slate-500">Review your past resume optimizations, downloads, and AI generations.</p>
+              </div>
+              
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                <table className="w-full border-collapse text-left text-sm text-slate-500">
+                  <thead className="bg-slate-50 text-xs font-bold uppercase text-slate-700 border-b border-slate-100">
+                    <tr>
+                      <th scope="col" className="px-6 py-4">Activity</th>
+                      <th scope="col" className="px-6 py-4">Resource</th>
+                      <th scope="col" className="px-6 py-4">Details</th>
+                      <th scope="col" className="px-6 py-4">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 border-t border-slate-100">
+                    {resumes.map((r) => {
+                      const hasAts = r.atsScore !== undefined;
+                      return (
+                        <tr key={r.id} className="hover:bg-slate-50/50">
+                          <td className="px-6 py-4 font-semibold text-slate-900 flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full ${hasAts ? 'bg-indigo-500' : 'bg-emerald-500'}`} />
+                            {hasAts ? 'ATS Optimization' : 'Resume Created'}
+                          </td>
+                          <td className="px-6 py-4 font-medium text-slate-700">{r.title}</td>
+                          <td className="px-6 py-4 font-bold text-slate-600">
+                            {hasAts ? `Match Score: ${r.atsScore}%` : 'Standard Template'}
+                          </td>
+                          <td className="px-6 py-4">
+                            {r.updatedAt?.seconds ? new Date(r.updatedAt.seconds * 1000).toLocaleDateString() : 'Just now'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {resumes.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-medium">
+                          No activity history found. Start by creating a resume!
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            /* PRICING VIEW */
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-2xl font-display font-extrabold text-slate-950">Upgrade Account</h3>
+                <p className="text-slate-500">Enable premium templates, AI-guided cover letters, and unlimited resume optimization scans.</p>
+              </div>
+              <div className="bg-white rounded-3xl p-2 border border-slate-200 shadow-sm max-w-4xl">
+                <Pricing 
+                  userId={user.uid}
+                  email={user.email || ''}
+                  currentStatus={subscriptionStatus}
+                />
+              </div>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );

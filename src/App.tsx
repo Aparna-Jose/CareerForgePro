@@ -92,14 +92,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-zinc-900 selection:text-white">
-      <Navbar 
-        user={user} 
-        onSignIn={handleSignIn} 
-        onSignOut={() => auth.signOut()} 
-        onViewChange={setView}
-        currentView={view}
-        subscriptionStatus={subscriptionStatus}
-      />
+      {!user && (
+        <Navbar 
+          user={user} 
+          onSignIn={handleSignIn} 
+          onSignOut={() => auth.signOut()} 
+          onViewChange={setView}
+          currentView={view}
+          subscriptionStatus={subscriptionStatus}
+        />
+      )}
       <main>
         <AnimatePresence mode="wait">
           {!user ? (
@@ -111,7 +113,7 @@ export default function App() {
             >
               <Hero onGetStarted={handleSignIn} />
             </motion.div>
-          ) : view === 'dashboard' ? (
+          ) : (
             <motion.div
               key="dashboard"
               initial={{ opacity: 0 }}
@@ -122,19 +124,7 @@ export default function App() {
                 user={user} 
                 subscriptionStatus={subscriptionStatus} 
                 nextBillingDate={nextBillingDate}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="pricing"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <Pricing 
-                userId={user.uid} 
-                email={user.email || ''} 
-                currentStatus={subscriptionStatus} 
+                onSignOut={() => auth.signOut()}
               />
             </motion.div>
           )}

@@ -210,28 +210,7 @@ export function Pricing({ userId, email, currentStatus }: PricingProps) {
         ))}
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-24 flex flex-col items-center justify-center gap-10 text-center px-6"
-      >
-        <div className="flex items-center gap-12 opacity-30 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-          <ShieldCheck size={48} />
-          <Zap size={48} />
-          <Sparkles size={48} />
-        </div>
-        <div className="max-w-lg">
-          <p className="text-sm font-medium text-slate-400 leading-relaxed mb-4">
-            Secure payments powered by Stripe. Your data is encrypted with bank-grade security and ATS-optimized for maximum impact.
-          </p>
-          <div className="flex items-center justify-center gap-4">
-            <div className="h-px w-12 bg-slate-200" />
-            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Trusted by 50,000+ Professionals</span>
-            <div className="h-px w-12 bg-slate-200" />
-          </div>
-        </div>
-      </motion.div>
+
     </div>
   );
 }
