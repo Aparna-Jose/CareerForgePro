@@ -13,16 +13,23 @@ CareerForgePro is a modern resume builder website that helps users create profes
 
 ## Screenshots
 *Dashboard
-<img width="1880" height="876" alt="image" src="https://github.com/user-attachments/assets/7b01b4d0-7c7f-46af-abf8-be53313fac73" />
+<img width="1880" height="876" alt="Screenshot 2026-05-24 164836" src="https://github.com/user-attachments/assets/b3404bea-1b1b-4bca-8df9-9edcb81efa9d" />
+
 
 *Resume Editor
-<img width="1896" height="865" alt="image" src="https://github.com/user-attachments/assets/004046d2-1a5d-4643-96a8-26e68f958865" />
+<img width="1896" height="865" alt="Screenshot 2026-05-24 165517" src="https://github.com/user-attachments/assets/b19ccdc1-d222-486b-82c8-bbed1f7d7a1b" />
 
 *Resume Preview
-<img width="1898" height="866" alt="image" src="https://github.com/user-attachments/assets/fc7ba17d-d5f5-4a7e-81dd-66b395c41a01" />
+<img width="1898" height="866" alt="Screenshot 2026-05-24 165641" src="https://github.com/user-attachments/assets/9435dce6-e49e-47d5-8a09-2383fcc2bfa6" />
 
 *ATS Score
-<img width="1882" height="865" alt="image" src="https://github.com/user-attachments/assets/ed57b319-f956-4798-9007-0b3a44192358" />
+<img width="1882" height="865" alt="Screenshot 2026-05-24 165943" src="https://github.com/user-attachments/assets/80b456ff-b90e-4c7c-b741-af8c8a07abc4" />
 
 *Cover Letter
-<img width="1886" height="875" alt="image" src="https://github.com/user-attachments/assets/d63f3a50-cfe1-48cd-a29c-2e17e91948ff" />
+<img width="1886" height="875" alt="Screenshot 2026-05-24 170257" src="https://github.com/user-attachments/assets/2378eebe-5708-4b64-8ba3-e690781cd6bd" />
+
+*Stripe(pro)
+<img width="1331" height="869" alt="Screenshot 2026-05-24 172640" src="https://github.com/user-attachments/assets/13db518b-f26f-4308-8421-72b5169672dd" />
+
+<img width="1140" height="873" alt="image" src="https://github.com/user-attachments/assets/e82eda2a-5b1d-402f-885f-9c2f64fa0c47" />
+
