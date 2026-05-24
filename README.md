@@ -28,3 +28,9 @@ CareerForgePro is a modern resume builder website that helps users create profes
 *Cover Letter
 <img width="1886" height="875" alt="Screenshot 2026-05-24 170257" src="https://github.com/user-attachments/assets/2378eebe-5708-4b64-8ba3-e690781cd6bd" />
 
+*Stripe(pro)
+<img width="1331" height="869" alt="Screenshot 2026-05-24 172640" src="https://github.com/user-attachments/assets/13db518b-f26f-4308-8421-72b5169672dd" />
+
+<img width="1140" height="873" alt="image" src="https://github.com/user-attachments/assets/e82eda2a-5b1d-402f-885f-9c2f64fa0c47" />
+
+
