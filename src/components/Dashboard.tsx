@@ -42,6 +42,15 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate, onSignOut
   const isResizingSidebar = useRef(false);
   const resultsRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverLetterRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize cover letter textarea to prevent inner scrolling
+  useEffect(() => {
+    if (activeTab === 'cover-letter' && coverLetterRef.current) {
+      coverLetterRef.current.style.height = 'auto';
+      coverLetterRef.current.style.height = `${coverLetterRef.current.scrollHeight}px`;
+    }
+  }, [coverLetterText, activeTab]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -533,8 +542,8 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate, onSignOut
                 className="text-lg font-display font-extrabold text-slate-950 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-500 outline-none px-1 py-0.5 rounded transition-all w-60"
               />
             </div>
-          ) : (
-            /* Standard Dashboard Header */
+          ) : activeTab === 'resumes' && activeResume === null ? (
+            /* Standard Dashboard Header - Only visible on My Resumes page */
             <div className="relative w-72">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -545,6 +554,8 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate, onSignOut
                 className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-slate-50/50 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-semibold"
               />
             </div>
+          ) : (
+            <div />
           )}
 
           <div className="flex items-center gap-4">
@@ -912,11 +923,11 @@ export function Dashboard({ user, subscriptionStatus, nextBillingDate, onSignOut
                   
                   {coverLetterText ? (
                     <textarea 
+                      ref={coverLetterRef}
                       value={coverLetterText}
                       onChange={(e) => setCoverLetterText(e.target.value)}
-                      className="w-full flex-grow p-5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 whitespace-pre-wrap focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none font-serif text-base leading-relaxed"
+                      className="w-full flex-grow p-5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 whitespace-pre-wrap focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none font-serif text-base leading-relaxed overflow-hidden min-h-[300px]"
                       spellCheck="false"
-                      rows={12}
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center flex-grow py-12 opacity-50">
